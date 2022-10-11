@@ -1,4 +1,4 @@
-CREATE DATABASE BankDatabase
+--CREATE DATABASE BankDatabase
 GO
 
 USE BankDatabase
@@ -9,6 +9,8 @@ DROP TABLE IF EXISTS social_status
 DROP TABLE IF EXISTS branch
 DROP TABLE IF EXISTS bank
 DROP TABLE IF EXISTS city
+DROP PROCEDURE IF EXISTS AddMoneyByStatus
+DROP PROCEDURE IF EXISTS TransferMoney
 GO
 
 
@@ -101,7 +103,7 @@ INSERT INTO cards(account_id, balance) VALUES
 (8, 210),
 (8, 120)
 
--- 1
+/*-- 1
 SELECT bank_name
 FROM bank
 LEFT JOIN branch ON bank.bank_id = branch.bank_id
@@ -115,10 +117,113 @@ LEFT JOIN account AS A ON C.account_id = A.account_id
 LEFT JOIN bank AS B ON B.bank_id = A.bank_id
 
 -- 3
-SELECT A.account_id AS account_id, A.account_name AS name, A.account_surname AS surname, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS differences
+SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS differences
 FROM cards AS C
 FULL JOIN account AS A ON A.account_id = C.account_id
-GROUP BY A.account_id, A.account_name, A.account_surname
-HAVING AVG(A.balance) - ISNULL(SUM(C.balance), 0) != 0
+GROUP BY A.account_id
+HAVING AVG(A.balance) - ISNULL(SUM(C.balance), 0) != 0*/
+
+/*-- 4.1
+SELECT SC.status_name AS social_status, COUNT(*) AS num_of_cards
+FROM cards AS C
+LEFT JOIN account AS A ON A.account_id = C.account_id
+LEFT JOIN social_status AS SC ON A.status_id = SC.status_id
+GROUP BY SC.status_name
+
+-- 4.2
+SELECT *
+FROM cards AS C
+LEFT JOIN account AS A ON A.account_id = C.account_id
+LEFT JOIN social_status AS SC ON A.status_id = SC.status_id*/
+GO
+
+/*-- 5
+CREATE PROCEDURE AddMoneyByStatus
+@status_id INT
+AS
+BEGIN
+	IF NOT EXISTS ( SELECT * FROM social_status WHERE social_status.status_id = @status_id)
+	BEGIN
+		RAISERROR('Status with this id doesnt exist', 16, 1)
+		RETURN
+	END
+
+	IF NOT EXISTS ( SELECT * FROM account WHERE status_id = @status_id) 
+	BEGIN
+		RAISERROR('no one account have this status id', 16, 1)
+		RETURN
+	END
+
+	UPDATE account
+	SET balance = balance + 10
+	WHERE status_id = @status_id
+END
+GO
+
+select * from account
+EXEC AddMoneyByStatus @status_id = 1
+select * from account*/
+
+-- 6
+SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS available_money
+FROM cards AS C
+FULL JOIN account AS A ON A.account_id = C.account_id
+GROUP BY A.account_id
+GO
+
+-- 7
+CREATE PROCEDURE TransferMoney
+@account_id INT,
+@card_id INT,
+@sum INT
+AS
+BEGIN
+	IF NOT EXISTS (SELECT * FROM account WHERE account.account_id = @account_id)
+	BEGIN
+		RAISERROR('Account doesnt exist', 16, 1)
+		RETURN
+	END
 
 
+	IF NOT EXISTS (SELECT * FROM cards WHERE cards.card_id = @card_id)
+	BEGIN
+		RAISERROR('Card doesnt exist', 16, 1)
+		RETURN
+	END
+
+	IF NOT EXISTS (SELECT * FROM cards WHERE cards.account_id = @account_id AND cards.card_id = @card_id)
+	BEGIN
+		RAISERROR('The card is not belongs to this account', 16, 1)
+		RETURN
+	END
+
+	DECLARE @diff INT = 0
+
+	SET @diff = (SELECT AVG(A.balance) - ISNULL(SUM(C.balance), 0) 
+	FROM cards AS C
+	LEFT JOIN account AS A ON A.account_id = C.account_id
+	WHERE A.account_id = @account_id
+	GROUP BY A.account_id) - @sum;
+
+	IF (@diff < 0)
+	BEGIN
+		RAISERROR('Account doesnt have enough money to transact', 16, 1)
+		RETURN
+	END
+	
+	BEGIN TRANSACTION
+		UPDATE cards
+		SET balance = balance + @sum
+		WHERE card_id = @card_id
+
+		IF(@@ERROR != 0)
+			ROLLBACK	
+	COMMIT
+END
+GO
+
+SELECT * FROM cards
+EXEC TransferMoney @account_id = 2, @card_id = 3, @sum = 5
+SELECT * FROM cards
+
+-- 8
