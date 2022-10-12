@@ -1,4 +1,4 @@
---CREATE DATABASE BankDatabase
+CREATE DATABASE BankDatabase
 GO
 
 USE BankDatabase
@@ -13,8 +13,6 @@ DROP PROCEDURE IF EXISTS AddMoneyByStatus
 DROP PROCEDURE IF EXISTS TransferMoney
 GO
 
-
---USE tmpDatabase
 
 -- 0
 CREATE TABLE bank
@@ -76,8 +74,7 @@ account_name VARCHAR(20) NOT NULL,
 account_surname VARCHAR(20) NOT NULL,
 balance MONEY NOT NULL);
 
-
-INSERT INTO account(bank_id, status_id, passport_data, account_name, account_surname, balance) VALUES
+INSERT INTO account(bank_id, status_id, passport_data, account_surname, account_name, balance) VALUES
 (1, 1,'sf28', 'Иванов', 'Алексей',  200),
 (2, 1, 'rg19', 'Смирнов', 'Даниил',  350),
 (1, 1, 'ka56', 'Петров', 'Денис', 50),
@@ -103,12 +100,14 @@ INSERT INTO cards(account_id, balance) VALUES
 (8, 210),
 (8, 120)
 
-/*-- 1
+
+-- 1
 SELECT bank_name
 FROM bank
 LEFT JOIN branch ON bank.bank_id = branch.bank_id
 LEFT JOIN city ON branch.city_id = city.city_id
 WHERE city.city_name = 'Минск'
+
 
 -- 2
 SELECT C.card_id AS card_id, A.account_name AS account_name, A.account_surname AS account_surname, C.balance AS balance
@@ -116,14 +115,16 @@ FROM cards AS C
 LEFT JOIN account AS A ON C.account_id = A.account_id
 LEFT JOIN bank AS B ON B.bank_id = A.bank_id
 
+
 -- 3
 SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS differences
 FROM cards AS C
 FULL JOIN account AS A ON A.account_id = C.account_id
 GROUP BY A.account_id
-HAVING AVG(A.balance) - ISNULL(SUM(C.balance), 0) != 0*/
+HAVING AVG(A.balance) - ISNULL(SUM(C.balance), 0) != 0
 
-/*-- 4.1
+
+-- 4.1
 SELECT SC.status_name AS social_status, COUNT(*) AS num_of_cards
 FROM cards AS C
 LEFT JOIN account AS A ON A.account_id = C.account_id
@@ -131,13 +132,16 @@ LEFT JOIN social_status AS SC ON A.status_id = SC.status_id
 GROUP BY SC.status_name
 
 -- 4.2
-SELECT *
-FROM cards AS C
-LEFT JOIN account AS A ON A.account_id = C.account_id
-LEFT JOIN social_status AS SC ON A.status_id = SC.status_id*/
+SELECT SC.status_name AS social_status, internal.num_of_cards AS num_of_cards
+FROM social_status AS SC
+RIGHT JOIN (SELECT A.status_id, COUNT(*) AS num_of_cards FROM account AS A 
+RIGHT JOIN cards AS C ON A.account_id = C.account_id
+GROUP BY A.status_id) AS internal ON internal.status_id = SC.status_id
+
 GO
 
-/*-- 5
+
+-- 5
 CREATE PROCEDURE AddMoneyByStatus
 @status_id INT
 AS
@@ -162,7 +166,8 @@ GO
 
 select * from account
 EXEC AddMoneyByStatus @status_id = 1
-select * from account*/
+select * from account
+
 
 -- 6
 SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS available_money
@@ -170,6 +175,7 @@ FROM cards AS C
 FULL JOIN account AS A ON A.account_id = C.account_id
 GROUP BY A.account_id
 GO
+
 
 -- 7
 CREATE PROCEDURE TransferMoney
@@ -225,5 +231,100 @@ GO
 SELECT * FROM cards
 EXEC TransferMoney @account_id = 2, @card_id = 3, @sum = 5
 SELECT * FROM cards
+GO
+
 
 -- 8
+CREATE TRIGGER account_insert_update
+ON account
+AFTER INSERT, UPDATE
+AS
+BEGIN
+	DECLARE @diff INT = 0
+
+	SET @diff = (SELECT  ISNULL(AVG(A.balance), 0) - ISNULL(SUM(C.balance), 0) 
+	FROM account AS A 
+	INNER JOIN inserted AS i ON A.account_id = i.account_id
+	RIGHT JOIN cards AS C  ON A.account_id = C.account_id
+	where A.account_id = i.account_id 
+	GROUP BY A.account_id);
+
+	IF (@diff < 0)
+	BEGIN
+		RAISERROR('account balance < sum of cards balance)', 16, 1)
+		ROLLBACK
+	END
+
+	IF EXISTS (SELECT * FROM inserted AS I WHERE I.balance < 0)
+	BEGIN
+		RAISERROR('account balance cant be negative', 16, 1)
+		ROLLBACK
+	END
+END
+GO
+
+select * from cards
+select * from account
+GO
+
+UPDATE account
+SET balance = 5
+where account_id = 1
+GO
+
+select * from cards
+select * from account
+GO
+
+INSERT INTO account(bank_id, status_id, passport_data, account_surname, account_name, balance) VALUES
+(1, 1, 'gh27', 'Петрович', 'Пётр', -5)
+GO
+
+select * from cards
+select * from account
+GO
+
+CREATE TRIGGER cards_insert_update
+ON cards
+AFTER INSERT, UPDATE
+AS
+BEGIN
+	DECLARE @diff INT = 0
+
+	SET @diff = (SELECT AVG(A.balance) - ISNULL(SUM(C.balance), 0) 
+	FROM inserted as I, cards AS C
+	LEFT JOIN account AS A ON A.account_id = C.account_id
+	where I.account_id = A.account_id
+	GROUP BY A.account_id);
+	
+	IF (@diff < 0)
+	BEGIN
+		RAISERROR('account balance < sum of cards balance)', 16, 1)
+		ROLLBACK
+	END
+
+	IF EXISTS (SELECT * FROM inserted AS I WHERE I.balance < 0)
+	BEGIN
+		RAISERROR('card balance cant be negative', 16, 1)
+		ROLLBACK
+	END
+END
+GO
+
+select * from cards
+GO
+
+update cards
+set balance = 120
+where card_id = 1
+GO
+
+select * from cards
+GO
+
+INSERT INTO cards(account_id, balance) VALUES
+(1, 15)
+GO
+
+select * from cards
+GO
