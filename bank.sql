@@ -1,5 +1,6 @@
-CREATE DATABASE BankDatabase
-GO
+--CREATE DATABASE BankDatabase
+--GO
+
 
 USE BankDatabase
 
@@ -20,22 +21,22 @@ CREATE TABLE bank
 bank_name VARCHAR(50) UNIQUE NOT NULL);
 
 INSERT INTO bank(bank_name) VALUES
-('БЕЛАРУСЬБАНК'),
-('БЕЛАГРОПРОМБАНК'),
-('ПРИОР-БАНК'),
-('БЕЛПРОМСТРОЙБАНК'),
-('БЕЛИНВЕСТБАНК')
+('Belarusbank'),
+('Belagroprombank'),
+('Priorbank'),
+('Sberbank'),
+('Belinvestbank')
 
 CREATE TABLE city
 (city_id INT IDENTITY PRIMARY KEY,
 city_name VARCHAR(30) UNIQUE NOT NULL);
 
 INSERT INTO city(city_name) VALUES
-('Минск'),
-('Могилёв'),
-('Полоцк'),
-('Брест'),
-('Борисов')
+('Minsk'),
+('Mogilev'),
+('Polotsk'),
+('Brest'),
+('Borisov')
 
 CREATE TABLE branch
 (branch_id INT IDENTITY PRIMARY KEY,
@@ -44,26 +45,26 @@ city_id INT FOREIGN KEY REFERENCES city(city_id),
 branch_name VARCHAR(50) UNIQUE NOT NULL);
 
 INSERT INTO branch(bank_id, city_id, branch_name) VALUES
-(1, 1, 'БеларусьБанк-01'),
-(1, 2, 'БеларусьБанк-02'),
-(3, 1, 'ПриорБанк-92'),
-(3, 5, 'ПриорБанк-31'),
-(5, 2, 'БелинвестБанк-50'),
-(5, 5, 'БелинвестБанк-32'),
-(5, 1, 'БелинвестБанк-14'),
-(2, 5, 'БелагропромБанк-32'),
-(4, 4, 'БелпромстройБанк-04')
+(1, 1, 'Belarusbank-01'),
+(1, 2, 'Belarusbank-02'),
+(3, 1, 'Priorbank-92'),
+(3, 5, 'Priorbank-31'),
+(5, 2, 'Belinvestbank-50'),
+(5, 5, 'Belinvestbank-32'),
+(5, 1, 'Belinvestbank-14'),
+(2, 5, 'Belagroprombank-32'),
+(4, 4, 'Sberbank-04')
 
 CREATE TABLE social_status
 (status_id INT IDENTITY PRIMARY KEY,
 status_name VARCHAR(20) NOT NULL);
 
 INSERT INTO social_status(status_name) VALUES
-('Рабочий'),
-('Инвалид'),
-('Пенсионер'),
-('Безработный'),
-('Студент')
+('Worker'),
+('Disabled'),
+('Pensioner'),
+('Unemployed'),
+('Student')
 
 CREATE TABLE account
 (account_id INT IDENTITY PRIMARY KEY,
@@ -75,14 +76,14 @@ account_surname VARCHAR(20) NOT NULL,
 balance MONEY NOT NULL);
 
 INSERT INTO account(bank_id, status_id, passport_data, account_surname, account_name, balance) VALUES
-(1, 1,'sf28', 'Иванов', 'Алексей',  200),
-(2, 1, 'rg19', 'Смирнов', 'Даниил',  350),
-(1, 1, 'ka56', 'Петров', 'Денис', 50),
-(3, 2, 'hg92', 'Новиков', 'Владимир', 400),
-(3, 3, 'ak45', 'Морозов', 'Егор', 270),
-(4, 3, 'jy28', 'Попов', 'Владислав', 460),
-(5, 3,'hg02', 'Михайлов', 'Кирилл', 600),
-(5, 2,'ba97', 'Павлов', 'Роман', 420)
+(1, 1,'sf28', 'Ivanov', 'Alexei',  200),
+(2, 1, 'rg19', 'Smirnov', 'Daniel',  350),
+(1, 1, 'ka56', 'Petrov', 'Denis', 50),
+(3, 2, 'hg92', 'Novikov', 'Vladimir', 400),
+(3, 3, 'ak45', 'Morozov', 'Egor', 270),
+(4, 3, 'jy28', 'Popov', 'Vladislav', 460),
+(5, 3, 'hg02', 'Mikhailov', 'Kirill', 600),
+(5, 2, 'ba97', 'Pavlov', 'Roman', 420)
 
 CREATE TABLE cards
 (card_id INT IDENTITY PRIMARY KEY,
@@ -106,7 +107,7 @@ SELECT bank_name
 FROM bank
 LEFT JOIN branch ON bank.bank_id = branch.bank_id
 LEFT JOIN city ON branch.city_id = city.city_id
-WHERE city.city_name = 'Минск'
+WHERE city.city_name = 'Minsk'
 
 
 -- 2
@@ -277,7 +278,7 @@ select * from account
 GO
 
 INSERT INTO account(bank_id, status_id, passport_data, account_surname, account_name, balance) VALUES
-(1, 1, 'gh27', 'Петрович', 'Пётр', -5)
+(1, 1, 'gh27', 'Petrovich', 'Peter', -5)
 GO
 
 select * from cards
