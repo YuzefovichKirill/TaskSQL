@@ -103,42 +103,64 @@ INSERT INTO cards(account_id, balance) VALUES
 
 
 -- 1
-SELECT bank_name
+SELECT 
+	bank_name
 FROM bank
-LEFT JOIN branch ON bank.bank_id = branch.bank_id
-LEFT JOIN city ON branch.city_id = city.city_id
+LEFT JOIN branch 
+	ON bank.bank_id = branch.bank_id
+LEFT JOIN city 
+	ON branch.city_id = city.city_id
 WHERE city.city_name = 'Minsk'
 
 
 -- 2
-SELECT C.card_id AS card_id, A.account_name AS account_name, A.account_surname AS account_surname, C.balance AS balance
+SELECT	
+	C.card_id AS card_id, 
+	A.account_name AS account_name, 
+	A.account_surname AS account_surname, 
+	C.balance AS balance
 FROM cards AS C
-LEFT JOIN account AS A ON C.account_id = A.account_id
-LEFT JOIN bank AS B ON B.bank_id = A.bank_id
+LEFT JOIN account AS A 
+	ON C.account_id = A.account_id
+LEFT JOIN bank AS B 
+	ON B.bank_id = A.bank_id
 
 
 -- 3
-SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS differences
+SELECT	
+	A.account_id AS account_id, 
+	AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS differences
 FROM cards AS C
-FULL JOIN account AS A ON A.account_id = C.account_id
+FULL JOIN account AS A 
+	ON A.account_id = C.account_id
 GROUP BY A.account_id
 HAVING AVG(A.balance) - ISNULL(SUM(C.balance), 0) != 0
 
 
 -- 4.1
-SELECT SC.status_name AS social_status, COUNT(*) AS num_of_cards
+SELECT	
+	SC.status_name AS social_status, 
+	COUNT(*) AS num_of_cards
 FROM cards AS C
-LEFT JOIN account AS A ON A.account_id = C.account_id
-LEFT JOIN social_status AS SC ON A.status_id = SC.status_id
+LEFT JOIN account AS A 
+	ON A.account_id = C.account_id
+LEFT JOIN social_status AS SC 
+	ON A.status_id = SC.status_id
 GROUP BY SC.status_name
 
 -- 4.2
-SELECT SC.status_name AS social_status, internal.num_of_cards AS num_of_cards
+SELECT	
+	SC.status_name AS social_status, 
+	internal.num_of_cards AS num_of_cards
 FROM social_status AS SC
-RIGHT JOIN (SELECT A.status_id, COUNT(*) AS num_of_cards FROM account AS A 
-RIGHT JOIN cards AS C ON A.account_id = C.account_id
-GROUP BY A.status_id) AS internal ON internal.status_id = SC.status_id
-
+RIGHT JOIN 
+	(SELECT A.status_id, 
+			COUNT(*) AS num_of_cards 
+	FROM account AS A 
+	RIGHT JOIN cards AS C 
+		ON A.account_id = C.account_id
+	GROUP BY A.status_id) AS internal 
+	ON internal.status_id = SC.status_id
 GO
 
 
@@ -165,15 +187,20 @@ BEGIN
 END
 GO
 
-select * from account
+SELECT * FROM account
+
 EXEC AddMoneyByStatus @status_id = 1
-select * from account
+
+SELECT * FROM account
 
 
 -- 6
-SELECT A.account_id AS account_id, AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS available_money
+SELECT 
+	A.account_id AS account_id, 
+	AVG(A.balance) - ISNULL(SUM(C.balance), 0) AS available_money
 FROM cards AS C
-FULL JOIN account AS A ON A.account_id = C.account_id
+FULL JOIN account AS A 
+	ON A.account_id = C.account_id
 GROUP BY A.account_id
 GO
 
@@ -191,7 +218,6 @@ BEGIN
 		RETURN
 	END
 
-
 	IF NOT EXISTS (SELECT * FROM cards WHERE cards.card_id = @card_id)
 	BEGIN
 		RAISERROR('Card doesnt exist', 16, 1)
@@ -207,10 +233,11 @@ BEGIN
 	DECLARE @diff INT = 0
 
 	SET @diff = (SELECT AVG(A.balance) - ISNULL(SUM(C.balance), 0) 
-	FROM cards AS C
-	LEFT JOIN account AS A ON A.account_id = C.account_id
-	WHERE A.account_id = @account_id
-	GROUP BY A.account_id) - @sum;
+				FROM cards AS C
+				LEFT JOIN account AS A 
+					ON A.account_id = C.account_id
+				WHERE A.account_id = @account_id
+				GROUP BY A.account_id) - @sum;
 
 	IF (@diff < 0)
 	BEGIN
@@ -230,7 +257,9 @@ END
 GO
 
 SELECT * FROM cards
+
 EXEC TransferMoney @account_id = 2, @card_id = 3, @sum = 5
+
 SELECT * FROM cards
 GO
 
@@ -243,12 +272,15 @@ AS
 BEGIN
 	DECLARE @diff INT = 0
 
-	SET @diff = (SELECT  ISNULL(AVG(A.balance), 0) - ISNULL(SUM(C.balance), 0) 
-	FROM account AS A 
-	INNER JOIN inserted AS i ON A.account_id = i.account_id
-	RIGHT JOIN cards AS C  ON A.account_id = C.account_id
-	where A.account_id = i.account_id 
-	GROUP BY A.account_id);
+	SET @diff = (SELECT  
+					ISNULL(AVG(A.balance), 0) - ISNULL(SUM(C.balance), 0) 
+				FROM account AS A 
+				INNER JOIN inserted AS i
+					ON A.account_id = i.account_id
+				RIGHT JOIN cards AS C 
+					ON A.account_id = C.account_id
+				WHERE A.account_id = i.account_id 
+				GROUP BY A.account_id);
 
 	IF (@diff < 0)
 	BEGIN
@@ -264,25 +296,28 @@ BEGIN
 END
 GO
 
-select * from cards
-select * from account
+SELECT * FROM cards
+
+SELECT * from account
 GO
 
 UPDATE account
 SET balance = 5
-where account_id = 1
+WHERE account_id = 1
 GO
 
-select * from cards
-select * from account
+SELECT * FROM cards
+
+SELECT * FROM account
 GO
 
 INSERT INTO account(bank_id, status_id, passport_data, account_surname, account_name, balance) VALUES
 (1, 1, 'gh27', 'Petrovich', 'Peter', -5)
 GO
 
-select * from cards
-select * from account
+SELECT * FROM cards
+
+SELECT * FROM account
 GO
 
 CREATE TRIGGER cards_insert_update
@@ -292,11 +327,15 @@ AS
 BEGIN
 	DECLARE @diff INT = 0
 
-	SET @diff = (SELECT AVG(A.balance) - ISNULL(SUM(C.balance), 0) 
-	FROM inserted as I, cards AS C
-	LEFT JOIN account AS A ON A.account_id = C.account_id
-	where I.account_id = A.account_id
-	GROUP BY A.account_id);
+	SET @diff = (SELECT 
+					AVG(A.balance) - ISNULL(SUM(C.balance), 0) 
+				FROM 
+					inserted as I, 
+					cards AS C
+				LEFT JOIN account AS A 
+					ON A.account_id = C.account_id
+				WHERE I.account_id = A.account_id
+				GROUP BY A.account_id);
 	
 	IF (@diff < 0)
 	BEGIN
@@ -312,20 +351,20 @@ BEGIN
 END
 GO
 
-select * from cards
+SELECT * FROM cards
 GO
 
-update cards
-set balance = 120
-where card_id = 1
+UPDATE cards
+SET balance = 120
+WHERE card_id = 1
 GO
 
-select * from cards
+SELECT * FROM cards
 GO
 
 INSERT INTO cards(account_id, balance) VALUES
 (1, 15)
 GO
 
-select * from cards
+SELECT * FROM cards
 GO
